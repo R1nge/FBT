@@ -1,6 +1,8 @@
 import cv2
 import mediapipe as mp
 import numpy as np
+from mediapipe.framework.formats import landmark_pb2
+from mediapipe import solutions
 
 model_path = 'E:/UnityProjects/FBT/Server/pose_landmarker_full.task'
 BaseOptions = mp.tasks.BaseOptions
@@ -18,14 +20,24 @@ def print_result(result: PoseLandmarkerResult, output_image: mp.Image, timestamp
     print('pose landmarker result: {}'.format(result))
 
 def draw_landmarks_on_image(image, detection_result):
-    if detection_result.pose_landmarks:
-        print("pose_landmarks structure:", type(detection_result.pose_landmarks))
-        for idx, landmarks in enumerate(detection_result.pose_landmarks):
-            print(f"Landmark set {idx} structure:", type(landmarks))
-            for point in landmarks:
-                print(f"Point structure:", type(point))
-                cv2.circle(image, (int(point.x * image.shape[1]), int(point.y * image.shape[0])), 2, (0, 255, 0), -1)
-    return image
+    pose_landmarks_list = detection_result.pose_landmarks
+    annotated_image = np.copy(image)
+    
+      # Loop through the detected poses to visualize.
+    for idx in range(len(pose_landmarks_list)):
+      pose_landmarks = pose_landmarks_list[idx]
+    
+        # Draw the pose landmarks.
+      pose_landmarks_proto = landmark_pb2.NormalizedLandmarkList()
+      pose_landmarks_proto.landmark.extend([
+        landmark_pb2.NormalizedLandmark(x=landmark.x, y=landmark.y, z=landmark.z) for landmark in pose_landmarks
+      ])
+      solutions.drawing_utils.draw_landmarks(
+        annotated_image,
+        pose_landmarks_proto,
+        solutions.pose.POSE_CONNECTIONS,
+        solutions.drawing_styles.get_default_pose_landmarks_style())
+    return annotated_image
 
 options = PoseLandmarkerOptions(
     base_options=BaseOptions(model_asset_path=model_path),
