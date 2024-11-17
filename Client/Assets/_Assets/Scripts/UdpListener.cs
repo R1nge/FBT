@@ -1,50 +1,72 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Net;
 using System.Net.Sockets;
 using System.Text;
-using System.Threading.Tasks;
+using AsyncIO;
+using NetMQ;
+using NetMQ.Sockets;
+using UnityEditor.VersionControl;
 using UnityEngine;
+using Task = System.Threading.Tasks.Task;
 
 namespace _Assets.Scripts
 {
     public class UdpListener : MonoBehaviour
     {
+        public event Action<string> OnMessageReceived;
+    
+        private string _host;
+        private string _port;
+
         private void Start()
         {
-            Init();
+            Init(); 
         }
 
         public void Init()
         {
-            Task.Run(Listen);
+            _host = "127.0.0.1";
+            _port = "9085";
+            GetMessage("Hello!");
         }
 
-        public void Listen()
+        public async void GetMessage(string text)
         {
-            byte[] data = new byte[1024];
-            IPEndPoint ipep = new IPEndPoint(IPAddress.Any, 9050);
-            UdpClient newsock = new UdpClient(ipep);
-            
-            Debug.Log($"Waiting for a client on {ipep.Address}:{ipep.Port}");
+            var result = Task.Run(() => RequestMessage(text));
+            await result;
+            OnMessageReceived?.Invoke(result.Result);
+        }
 
-            IPEndPoint sender = new IPEndPoint(IPAddress.Any, 0);
-
-            data = newsock.Receive(ref sender);
-
-            Debug.Log($"Message received from {sender}");
-            Debug.Log(Encoding.ASCII.GetString(data, 0, data.Length));
-
-            string welcome = "Welcome to my test server";
-            data = Encoding.ASCII.GetBytes(welcome);
-            newsock.Send(data, data.Length, sender);
-
-            while(true)
+        private string RequestMessage(object text)
+        {
+            var messageReceived = false;
+            var message = "";
+            ForceDotNet.Force();
+            var timeout = new TimeSpan(0, 0, 30);
+        
+            using (var socket = new RequestSocket())
             {
-                data = newsock.Receive(ref sender);
+                socket.Connect($"tcp://{_host}:{_port}");
+                if (socket.TrySendFrame($"{text}"))
+                {
+                    messageReceived = socket.TryReceiveFrameString(timeout, out message);
 
-                Debug.Log(Encoding.ASCII.GetString(data, 0, data.Length));
-                newsock.Send(data, data.Length, sender);
+                    if (messageReceived)
+                    {
+                        Debug.Log($"Socket has received a message: {message}");
+                    }
+                }
             }
+
+            NetMQConfig.Cleanup();
+            if (!messageReceived)
+            {
+                message = "Could not receive message from server!";
+                Debug.LogWarning(message);
+            }
+
+            return message;
         }
     }
 }

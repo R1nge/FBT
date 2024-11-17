@@ -1,4 +1,4 @@
-from UDP_Client import UDPClient
+from server import Server
 from threading import Thread, Lock
 from time import sleep
 import cv2
@@ -6,9 +6,10 @@ import mediapipe as mp
 import numpy as np
 from mediapipe.framework.formats import landmark_pb2
 from mediapipe import solutions
+import time
+import asyncio
 
-udp_client = UDPClient()
-udp_client.sendHello()
+server = Server('127.0.0.1', '9085')
 
 model_path = 'E:/UnityProjects/FBT/Server/pose_landmarker_full.task'
 BaseOptions = mp.tasks.BaseOptions
@@ -67,6 +68,7 @@ def process(landmarker):
         if result_copy:
             annotated_image = draw_landmarks_on_image(frame, result_copy)
             cv2.imshow('Annotated Image', annotated_image)
+            server.send_string(str(result_copy))  # Ensure landmarks are correctly formatted
 
         if cv2.waitKey(5) & 0xFF == 27:
             break
@@ -75,36 +77,23 @@ def process(landmarker):
     cv2.destroyAllWindows()
     print("Video capture stopped")
 
-def start_udp_client():
-    print("UDP client started")
+
+
+
+async def main():
     while True:
-        with result_lock:
-            result_copy = global_detection_result
+        request = server.receive()
+        text_string = request.decode()
+        # text_string = re.sub(r'(\r\n.?)+', r'\r\n', text_string)
+        # text_string=text_string.strip('\r\n ')
+        # text_string = re.sub('\s+',' ', text_string)
+        # text = pygmalion.prompt(f"{personality} <START>/n What's your name?", MAX_LENGTH)
+        # text = text.split("\n",1)[1]
+        #emotions = emotion_analyzer.analyze(text_string)
+        #translation = translator.translate(text_string, "jpn_Jpan", MAX_LENGTH)
+        #r = {"text": translation, "emotions": emotions}
+        #r = json.dumps(r, ensure_ascii=False)
+        server.send_string("hello")
 
-        if result_copy:
-            udp_client.sendMessage(str(result_copy))  # Ensure landmarks are correctly formatted
 
-        sleep(0.1)
-
-def main():
-    print("Main function started")
-    options = PoseLandmarkerOptions(
-        base_options=BaseOptions(model_asset_path=model_path),
-        running_mode=VisionRunningMode.LIVE_STREAM,
-        result_callback=print_result
-    )
-
-    with PoseLandmarker.create_from_options(options) as landmarker:
-        process_thread = Thread(target=process, args=(landmarker,))
-        process_thread.start()
-        print("Image processing thread started")
-
-        udp_thread = Thread(target=start_udp_client)
-        udp_thread.start()
-        print("UDP client thread started")
-
-        process_thread.join()
-        udp_thread.join()
-
-if __name__ == "__main__":
-    main()
+asyncio.run(main())
