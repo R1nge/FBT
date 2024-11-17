@@ -12,3 +12,11 @@ class UDPClient:
     msgFromServer = UDPClientSocket.recvfrom(self.bufferSize)
     msg = "Message from Server {}".format(msgFromServer[0])
     print(msg)
+    
+  def sendMessage(self, msg):
+     UDPClientSocket = self.socket.socket(family=self.socket.AF_INET, type=self.socket.SOCK_DGRAM)
+     UDPClientSocket.sendto(str.encode(msg), self.serverAddressPort)
+     print("Message sent!")
+     msgFromServer = UDPClientSocket.recvfrom(self.bufferSize)
+     msg = "Message from Server {}".format(msgFromServer[0])
+     print(msg)
