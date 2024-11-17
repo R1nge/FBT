@@ -50,6 +50,6 @@ with PoseLandmarker.create_from_options(options) as landmarker:
     image = mp.Image.create_from_file("image.jpg")
     detection_result = landmarker.detect(image)
     annotated_image = draw_landmarks_on_image(image.numpy_view(), detection_result)
-    cv2.imshow('image',annotated_image)
+    cv2.imshow('image', cv2.cvtColor(annotated_image, cv2.COLOR_RGB2BGR))
     cv2.waitKey(0)
     print("a")
