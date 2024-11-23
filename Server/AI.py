@@ -14,17 +14,11 @@ class AI:
     VisionRunningMode = mp.tasks.vision.RunningMode
 
     def print_result(self, result: PoseLandmarkerResult, output_image: mp.Image, timestamp_ms: int):
-        start_time = time.time()
-
         annotated_image = self.draw_landmarks_on_image(output_image.numpy_view(), result)
         #print('pose landmarker result: {}'.format(result))
-
         annotated_image_bgr = cv2.cvtColor(annotated_image, cv2.COLOR_RGB2BGR)
         cv2.imshow('Annotated Image', annotated_image_bgr)
-
-        elapsed_time = time.time() - start_time
-        wait_time = max(1, int((1/60 - elapsed_time)))
-        cv2.waitKey(wait_time)
+        cv2.waitKey(100)
 
     def draw_landmarks_on_image(self, image, detection_result):
         pose_landmarks_list = detection_result.pose_landmarks
